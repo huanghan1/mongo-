@@ -1,0 +1,1124 @@
+MONGODB基本命令用
+
+redis模糊匹配删除: redis-cli KEYS "pattern" | xargs redis-cli DEL
+
+
+2、通过forEach遍历数组：
+db.category.find().forEach(
+    function(item) {
+        item.privateAttrs.forEach(
+            function(arr, index) {
+                item.privateAttrs[index].seq = new NumberInt(item.privateAttrs[index].seq);
+            }
+        );
+        db.category.save(item);
+    }
+)
+3、forEach 说明
+forEach方法中的function回调有三个参数： 第一个参数是遍历的数组内容，第二个参数是对应的数组索引，第三个参数是数组本身
+--------------------- 
+作者：__時__ 
+来源：CSDN 
+原文：https://blog.csdn.net/jsdxshi/article/details/72841283 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+Nodejs+mongoose为例
+1.创建Schema：
+const mongoose = require( 'mongoose' );
+let goodsSchema = new mongoose.Schema( {
+name: String,
+price: Number,
+location: {
+    type: [ Number ],
+    index: {
+        type: '2dsphere',
+        sparse: true
+    }
+}
+}, {
+collection: 'Goods'
+} )
+
+2.创建Model
+let goodsModel = mongoose.model(‘Goods’, goodsSchema)
+
+3.插入数据
+按照以下数据格式往数据库插入数据：
+{
+"name":"名字",
+"price":12,
+"location":[经度，纬度]
+}
+
+4.查看用户附近的数据
+goodsModel.find( {
+    'location': {
+        $nearSphere: [
+            parseFloat( 经度 ),
+            parseFloat( 纬度 )
+        ],
+        $maxDistance: 1000
+    }
+} ).limit(10).skip(0).lean().exec();
+
+创建账户：
+db.createUser({  
+    user:'root',  
+    pwd:'root',  
+    customData:{description:"管理员root"},  
+    roles:[{  
+        'role':'root',  
+        'db':'admin'  
+    }]  
+})  
+db.createUser({  
+    user:'user2',  
+    pwd:'user2',  
+    customData:{description:"数据库账户描述"},  
+    roles:[{  
+        'role':'readWrite',  
+        'db':'demo2'  
+    }]  
+}) 
+
+
+
+
+#查看admin 数据库中的用户信息
+
+db.system.users.find();
+
+
+db.createUser(   {     user: "docdetection",     pwd: "123456",     roles: [ { role: "root", db: "admin" } ]   }
+)
+
+则对admin数据库添加了名为docdetection的用户（注：mongo为每一个数据库都提供了一套用户权限）
+
+接着关闭数据库(注：当启动了授权认证，只有root角色有权限可以关闭数据库)
+
+cd /etc/init.d/
+./mongodb restart
+db.shutdownServer();
+然后Ctrl + C的方式退出客户端连接
+第二次登录启用授权认证：
+
+cd /usr/local/mongodb
+./mongo ip:27017
+接着切换到admin数据库，使用查看用户命令
+
+use admin
+show users
+结果如下：
+{
+	"_id" : "admin.docdetection",
+	"user" : "docdetection",
+	"db" : "admin",
+	"roles" : [
+		{
+			"role" : "root",
+			"db" : "admin"
+		}
+	]
+}
+将提示未授权
+
+这时需要做授权认证,下面的命令是验证是否存在对应的用户
+
+> db.auth("docdetection","123456");
+1
+> db.auth("docdettion","123456");
+Error: Authentication failed.
+0
+>
+如上所示，如果数值为1表示已经存在了该用户，否则不存在该用户
+可以查询系统中是否有该用户了：
+> db.system.users.find();
+{ "_id" : "admin.docdetection", "user" : "docdetection", "db" : "admin", "credentials" : { "SCRAM-SHA-1" : { "iterationCount" : 10000, "salt" : "sRqUK+Hz0GeUZ++P+s248Q==", "storedKey" : "6AoCmjxxxxxFiwIn7ifSirc=", "serverKey" : "7Mrd4rbGcxcxq7vtbZLb5k=" } }, "roles" : [ { "role" : "root", "db" : "admin" } ] }
+{ "_id" : "docdetection.docdetection", "user" : "docdetection", "db" : "docdetection", "credentials" : { "SCRAM-SHA-1" : { "iterationCount" : 10000, "salt" : "5yVnFHjtjPedY21RlAP7wg==", "storedKey" : "58rxxphm/HDdUPfxxxxxe4NLlbLTI=", "serverKey" : "J46CYhOVxxxxxxr8bPBzkQZU=" } }, "roles" : [ { "role" : "readWrite", "db" : "docdetection" } ] }
+>
+再调用刚才的命令则可以查看到用户信息
+
+use admin
+
+show users
+
+显示的结果如下：
+
+{
+"_id" : "admin.docdetection",
+"user" : "docdetection",
+"db" : "admin",
+"roles" : [
+{
+"role" : "root",
+"db" : "admin"
+}
+]
+}
+
+接着我们需要为我们的数据库添加相关用户，这里使用
+
+docdetection为示例
+use docdetection
+db.createUser(
+ {
+   user: "docdetection",
+   pwd: "123456",
+   roles: [
+      { role: "readWrite", db: "docdetection" }
+   ]
+ }
+)
+这里为docdetection数据库添加了具有读写权限的角色
+1、创建用户并授权
+
+语法：db.createUser({user:"UserName",pwd:"Password",roles:[{role:"RoleName",db:"Target_DBName"}]})
+
+首先选择在哪个库创建用户，如test：use test;
+
+创建用户有3项需要提供：用户名，密码，角色列表
+
+例如我要在test下面创建用testuser，密码为testpwd，角色列表包括test库的readWrite角色和userAdmin角色：
+
+db.createUser({user:"testuser",pwd:"testpwd",roles:[{role:"readWrite",db:"test"},{role:"userAdmin",db:"test"}]})
+
+
+
+2、修改密码
+
+首先进入目标库：use test
+
+db.changeUserPassword('testuser','testPWD');
+
+
+
+3、添加角色
+
+首先进入目标库：use test
+
+db.grantRolesToUser(  "testuser",  [    { role: "read",db:"admin"}  ] )
+
+
+
+4、回收角色权限
+
+首先进入目标库：use test
+
+db.revokeRolesFromUser("testuser",[    { role: "read",db:"admin"}  ] )
+
+
+
+5、删除用户
+
+首先进入目标库：use test
+
+db.dropUser("testuser")
+
+登录认证:
+db.auth("root","123456") 
+
+查询已添加的用户：
+db.system.users.find()
+
+成功启动MongoDB后，再打开一个命令行窗口输入mongo，就可以进行数据库的一些操作。
+
+输入help可以看到基本操作命令：
+
+show dbs:显示数据库列表 
+show collections：显示当前数据库中的集合（类似关系数据库中的表） 
+show users：显示用户
+
+use <db name>：切换当前数据库，这和MS-SQL里面的意思一样 
+db.help()：显示数据库操作命令，里面有很多的命令 
+db.foo.help()：显示集合操作命令，同样有很多的命令，foo指的是当前数据库下，一个叫foo的集合，并非真正意义上的命令 
+db.foo.find()：对于当前数据库中的foo集合进行数据查找（由于没有条件，会列出所有数据） 
+db.foo.find( { a : 1 } )：对于当前数据库中的foo集合进行查找，条件是数据中有一个属性叫a，且a的值为1
+
+MongoDB没有创建数据库的命令，但有类似的命令。
+
+如：如果你想创建一个“myTest”的数据库，先运行use myTest命令，之后就做一些操作（如：db.createCollection('user')）,这样就可以创建一个名叫“myTest”的数据库。
+
+数据库常用命令
+
+###too many chunks to print, use verbose if you want to force print
+
+    可通过执行以下命令查看
+
+    printShardingStatus(db.getSisterDB("config"),1);
+
+##开启数据库分片功能
+db.runCommand({"enablesharding":"test"})
+
+##集合分片
+db.runCommand({"shardcollection":"dataproberisk.appAddressBook","key":{"customerId":1}});
+db.runCommand({"shardcollection":"dataproberisk.appCallRecords","key":{"customerId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.appDevMessage","key":{"customerId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.appInfos","key":{"customerId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.appMessage","key":{"customerId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.app_zm_info","key":{"customerId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.cardftime","key":{"customer_id":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.cardztime","key":{"customer_id":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.dataReport","key":{"applicationID":1,"taskType":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.customer_id_device","key":{"customerId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.device_id_customer","key":{"deviceId":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.facetime","key":{"customer_id":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.persontime","key":{"customer_id":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.tdLogin","key":{"customer_id":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.tdMessage","key":{"customer_id":1}}); 
+db.runCommand({"shardcollection":"dataproberisk.tdRegist","key":{"customer_id":1}});
+
+db.selfBlacklist.insertMany([                                                                                      
+{"createMan":"admin","remark":"模型-外部黑名单","phoneNum":"18975537815","certCode":"43102319911102781X","createTime": "2018-12-03 17:20:00","name":"刘邵盼"},
+{"createMan":"admin","remark":"模型-外部黑名单","phoneNum":"18508237693","certCode":"510121198910183867","createTime": "2018-12-03 17:20:00","name":"唐英"},
+{"createMan":"admin","remark":"模型-外部黑名单","phoneNum":"15133434591","certCode":"131024198812100814","createTime": "2018-12-03 17:20:00","name":"许晟铭"},
+{"createMan":"admin","remark":"模型-外部黑名单","phoneNum":"18377471486","certCode":"450422198606010212","createTime": "2018-12-03 17:20:00","name":"文玉堂"},
+{"createMan":"admin","remark":"模型-外部黑名单","phoneNum":"15579617772","certCode":"362425198806130218","createTime": "2018-12-03 17:20:00","name":"邓燕强"}
+])
+
+##查看分片情况
+sh.status()
+
+###too many chunks to print, use verbose if you want to force print
+##查看详细的分片chunks情况
+
+printShardingStatus(db.getSisterDB("config"),1); 
+
+4.块管理
+1.修改数据块大小
+单位MB，默认块大小为64MB。块越大迁移至分片的耗时就越长。
+
+use config;
+查询当前块大小
+db.settings.find({"_id":"chunksize"})
+修改块大小
+db.settings.save( { _id:"chunksize", value: 64 } );
+2.手动移动数据块
+2.1查询文档块信息
+
+db.getCollection('chunks').find({"ns":"test.xxxx"})
+
+
+2.2将块"$minKey"移动到分片rs-c上
+
+移动块只需要指定块的返回内的随便一个值即可，注意块的范围不包含上限。
+
+sh.moveChunk("test.xxxx",{"username":"$minKey"},"rs-c")
+
+
+Sh.moveChunk({"hydataprobe.sdk_visit_time",{"createTime":{$gte: 1, $lte: 20181220210334}},"d-uf6189b44c5a0bf4"})
+
+
+
+
+2.3拆分块
+
+如果块的大小超过setting设置的最大块大小时，系统会禁止移动块，这时候需要将块进行拆分。这里需要指定新的块范围，指定下限即可。
+
+
+
+ 
+
+sh.splitAt("test.xxxx",{ "username" :"p" })
+
+
+2.4查询块的大小
+
+db.runCommand({ dataSize: "test.xxxx", keyPattern: { "username": 1 }, min: { "username" : "b" }, max: { "username" : "c" } })
+单位字节，需要指定块的范围。
+
+2.5无法拆分的特大块处理
+
+假设使用year/month/day字段作为分片，某一天业务遭受攻击导致这天的数据量暴增，但是由于分片的值已经的最小单位了无法再拆分了，这个时候通过块拆分已经无法解决问题，可以手动将块移动到非热点的分片上。
+
+1、Help查看命令提示
+
+ help
+
+  db.help();
+
+  db.yourColl.help();
+
+  db.youColl.find().help();
+
+  rs.help();
+
+2、切换/创建数据库
+
+ use yourDB;  当创建一个集合(table)的时候会自动创建当前数据库
+
+3、查询所有数据库
+
+ show dbs;
+
+4、删除当前使用数据库
+
+ db.dropDatabase();
+
+5、从指定主机上克隆数据库
+
+ db.cloneDatabase(“127.0.0.1”); 将指定机器上的数据库的数据克隆到当前数据库
+
+6、从指定的机器上复制指定数据库数据到某个数据库
+
+ db.copyDatabase("mydb", "temp", "127.0.0.1");将本机的mydb的数据复制到temp数据库中
+
+7、修复当前数据库
+
+ db.repairDatabase();
+
+8、查看当前使用的数据库
+
+ db.getName();
+
+ db; db和getName方法是一样的效果，都可以查询当前使用的数据库
+
+9、显示当前db状态
+
+ db.stats();
+
+10、当前db版本
+
+ db.version();
+
+11、查看当前db的链接机器地址
+
+ db.getMongo();
+
+Collection聚集集合
+
+1、创建一个聚集集合（table）
+
+ db.createCollection(“collName”, {size: 20, capped: 5, max: 100});
+
+2、得到指定名称的聚集集合（table）
+
+ db.getCollection("account");
+
+3、得到当前db的所有聚集集合
+
+ db.getCollectionNames();
+
+4、显示当前db所有聚集索引的状态
+
+ db.printCollectionStats();
+
+ 用户相关
+
+1、添加一个用户
+
+ db.addUser("name");
+
+ db.addUser("userName", "pwd123", true); 添加用户、设置密码、是否只读
+
+2、数据库认证、安全模式
+
+ db.auth("userName", "123123");
+
+3、显示当前所有用户
+
+ show users;
+
+4、删除用户
+
+ db.removeUser("userName");
+
+其他
+
+1、查询之前的错误信息
+
+ db.getPrevError();
+
+2、清除错误记录
+
+ db.resetError();
+
+ 
+
+查看聚集集合基本信息
+
+1、查看帮助  db.yourColl.help();
+
+2、查询当前集合的数据条数  db.yourColl.count();
+
+3、查看数据空间大小 db.userInfo.dataSize();
+
+4、得到当前聚集集合所在的db db.userInfo.getDB();
+
+5、得到当前聚集的状态 db.userInfo.stats();
+
+6、得到聚集集合总大小 db.userInfo.totalSize();
+
+7、聚集集合储存空间大小 db.userInfo.storageSize();
+
+8、Shard版本信息  db.userInfo.getShardVersion()
+
+9、聚集集合重命名 db.userInfo.renameCollection("users"); 将userInfo重命名为users
+
+10、删除当前聚集集合 db.userInfo.drop();
+
+聚集集合查询
+
+1、查询所有记录
+
+db.userInfo.find();
+
+相当于：select* from userInfo;
+
+默认每页显示20条记录，当显示不下的情况下，可以用it迭代命令查询下一页数据。注意：键入it命令不能带“；”
+
+但是你可以设置每页显示数据的大小，用DBQuery.shellBatchSize= 50;这样每页就显示50条记录了。
+
+ 
+
+2、查询去掉后的当前聚集集合中的某列的重复数据
+
+db.userInfo.distinct("name");
+
+会过滤掉name中的相同数据
+
+相当于：select distict name from userInfo;
+
+ 
+
+3、查询age = 22的记录
+
+db.userInfo.find({"age": 22});
+
+相当于： select * from userInfo where age = 22;
+
+ 
+
+4、查询age > 22的记录
+
+db.userInfo.find({age: {$gt: 22}});
+
+相当于：select * from userInfo where age >22;
+
+ 
+
+5、查询age < 22的记录
+
+db.userInfo.find({age: {$lt: 22}});
+
+相当于：select * from userInfo where age <22;
+
+ 
+
+6、查询age >= 25的记录
+
+db.userInfo.find({age: {$gte: 25}});
+
+相当于：select * from userInfo where age >= 25;
+
+ 
+
+7、查询age <= 25的记录
+
+db.userInfo.find({age: {$lte: 25}});
+
+ 
+
+8、查询age >= 23 并且 age <= 26
+
+db.userInfo.find({age: {$gte: 23, $lte: 26}});
+
+ 
+
+9、查询name中包含 mongo的数据
+
+db.userInfo.find({name: /mongo/});
+
+//相当于%%
+
+select * from userInfo where name like ‘%mongo%’;
+
+ 
+
+10、查询name中以mongo开头的
+
+db.userInfo.find({name: /^mongo/});
+
+select * from userInfo where name like ‘mongo%’;
+
+ 
+
+11、查询指定列name、age数据
+
+db.userInfo.find({}, {name: 1, age: 1});
+
+相当于：select name, age from userInfo;
+
+当然name也可以用true或false,当用ture的情况下河name:1效果一样，如果用false就是排除name，显示name以外的列信息。
+
+ 
+
+12、查询指定列name、age数据, age > 25
+
+db.userInfo.find({age: {$gt: 25}}, {name: 1, age: 1});
+
+相当于：select name, age from userInfo where age >25;
+
+ 
+
+13、按照年龄排序
+
+升序：db.userInfo.find().sort({age: 1});
+
+降序：db.userInfo.find().sort({age: -1});
+
+ 
+
+14、查询name = zhangsan, age = 22的数据
+
+db.userInfo.find({name: 'zhangsan', age: 22});
+
+相当于：select * from userInfo where name = ‘zhangsan’ and age = ‘22’;
+
+ 
+
+15、查询前5条数据
+
+db.userInfo.find().limit(5);
+
+相当于：selecttop 5 * from userInfo;
+
+ 
+
+16、查询10条以后的数据
+
+db.userInfo.find().skip(10);
+
+相当于：select * from userInfo where id not in (
+
+selecttop 10 * from userInfo
+
+);
+
+ 
+
+17、查询在5-10之间的数据
+
+db.userInfo.find().limit(10).skip(5);
+
+可用于分页，limit是pageSize，skip是第几页*pageSize
+
+ 
+
+18、or与 查询
+
+db.userInfo.find({$or: [{age: 22}, {age: 25}]});
+
+相当于：select * from userInfo where age = 22 or age = 25;
+
+ 
+
+19、查询第一条数据
+
+db.userInfo.findOne();
+
+相当于：selecttop 1 * from userInfo;
+
+db.userInfo.find().limit(1);
+
+ 
+
+20、查询某个结果集的记录条数
+
+db.userInfo.find({age: {$gte: 25}}).count();
+
+相当于：select count(*) from userInfo where age >= 20;
+
+如果要返回限制之后的记录数量，要使用count(true)或者count(非0) 
+db.users.find().skip(10).limit(5).count(true);
+
+ 
+
+21、按照某列进行排序
+
+db.userInfo.find({sex: {$exists: true}}).count();
+
+相当于：select count(sex) from userInfo;
+
+索引
+
+1、创建索引
+
+db.userInfo.ensureIndex({name: 1});
+
+db.userInfo.ensureIndex({name: 1, ts: -1});
+
+db.t4.ensureIndex({firstname: 1, lastname: 1}, {unique: true});
+
+ 
+
+2、查询当前聚集集合所有索引
+
+db.userInfo.getIndexes();
+
+ 
+
+3、查看总索引记录大小
+
+db.userInfo.totalIndexSize();
+
+ 
+
+4、读取当前集合的所有index信息
+
+db.users.reIndex();
+
+ 
+
+5、删除指定索引
+
+db.users.dropIndex("name_1");
+
+ 
+
+6、删除所有索引索引
+
+db.users.dropIndexes();
+
+--显示collection的chunk分布信息
+db.collection.getShardDistribution()
+
+##移动分片chunks
+db.adminCommand({moveChunk : "risk.xnMessageLog", find : {"createTime":{$gt:82842}}, to : "d-uf60786acf3b4764"});
+
+ 修改、添加、删除集合数据
+
+1、添加
+
+db.users.save({name: ‘zhangsan’, age: 25, sex: true});
+
+添加的数据的数据列，没有固定，根据添加的数据为准
+
+ 
+
+2、修改
+
+db.collection.update(criteria, objNew, upsert, multi )
+
+criteria:update的查询条件，类似sql update查询内where后面的
+
+objNew:update的对象和一些更新的操作符（如$,$inc...）等，也可以理解为sql update查询内set后面的。
+
+upsert : 如果不存在update的记录，是否插入objNew,true为插入，默认是false，不插入。
+
+multi : mongodb默认是false,只更新找到的第一条记录，如果这个参数为true,就把按条件查出来多条记录全部更新。
+
+ 
+
+db.syncOperationDataReportCache.update({"appName": "4",  "status":"0"}, {$set: {"status":"3"}}, false, true);
+
+相当于：update users set name = ‘changeName’ where age = 25;
+
+
+
+ 
+
+db.users.update({name: 'Lisi'}, {$inc: {age: 50}}, false, true);
+
+相当于：update users set age = age + 50 where name = ‘Lisi’;
+
+--查询字段不存在的添加该字段
+db.selfBlacklist20181219.update({"createTime": {$exists:false}}, {$set: {"createTime": "2018-12-19 16:30:00"}}, false, true);
+
+db.users.update({name: 'Lisi'}, {$inc: {age: 50}, $set: {name: 'hoho'}}, false, true);
+
+相当于：update users set age = age + 50, name = ‘hoho’ where name = ‘Lisi’;
+
+ 
+
+3、删除
+
+db.users.remove({age: 132});
+
+ 
+
+4、查询修改删除
+
+db.users.findAndModify({
+
+    query: {age: {$gte: 25}},
+
+    sort: {age: -1},
+
+    update: {$set: {name: 'a2'}, $inc: {age: 2}},
+
+    remove: true
+
+});
+
+db.url.update({}, {$set: {content:""}}, {multi: 1})。
+
+
+db.users.findAndModify({
+query:{age :{$gte :25}},
+sort :{age:1},
+update:{$set:{name:'a3'},$inc:{age:2}},
+remove:true
+});
+
+
+db.selfBlacklist.findAndModify({
+
+    query: {{"createTime": {$exists:false}}},
+
+    sort: {blacklistId: -1},
+
+    update: {$set: {"createTime": "2018-12-19 16:30:00"}}
+});
+ 
+
+db.runCommand({ findandmodify : "users",
+
+    query: {age: {$gte: 25}},
+
+    sort: {age: -1},
+
+    update: {$set: {name: 'a2'}, $inc: {age: 2}},
+
+    remove: true
+
+});
+
+
+db.getCollection('videos').aggregate([
+  {
+	  '$match':{
+		  '_id':1
+	  }
+  },
+  {
+	  '$group': {
+		  '_id': {
+			  '$dateToString': {
+				  'format': '%Y-%m-%d',
+				  'date': {
+					  '$add': [
+						  new Date(0),
+						  '$createTime'
+					  ]
+				  }
+			  }
+		  },
+		  'count': {'$sum': 1}
+	  }
+}]);
+
+##聚合模板sum() group by 
+db.sales.runCommand(
+{
+mapreduce:"sales",)
+
+map:function()
+{
+  emit(
+     {key0:this.ProductCategory,
+      key1:this.ProductSubCategory,
+      key2:this.ProductName},
+     this.SalesAmt);
+},
+reduce:function(key,values)
+{
+     var result = Sum(key,values);
+     return result;
+}
+
+line in the map() function above
+
+out:{inline : 1 }});
+
+
+//找出所有数据量超过100w的信息集合info，并为其创建索引
+eval(function () {
+    var infos = [];
+    var collNames = db.getCollectionNames();
+    for (var i = 0; i < collNames.length; i++) {
+        var collName = collNames[i];
+        var collSize = db.getCollection(collName).count();
+        if (collSize > 1000000 && collName.indexOf("info_")==0) {
+          db.getCollection(collName).ensureIndex({publishDate:-1,blendedScore:-1,publishTime:-1,isRubbish:1},{name:"ScoreSortIdx",background:true});
+            db.getCollection(collName).ensureIndex({similarNum:-1,publishTime:-1,isRubbish:1},{name:"HotSortIdx",background:true});
+            db.getCollection(collName).ensureIndex({publishTime:-1,isRubbish:1},{name:"TimeSortIdx",background:true});
+            infos.push("name:" + collName + "索引创建成功");
+        }
+    }
+    return infos;
+}());
+
+
+
+
+##聚合
+db.ad_play_log.aggregate(
+    {
+        //https://docs.mongodb.org/manual/reference/method/db.collection.aggregate/
+        // 分组
+        $group: {
+            // 根据ad_position_id分组
+            _id: "$ad_position_id",
+            count: {
+                // 统计个数count
+                $sum: 1
+            },
+            total: {
+                // 对material_id相加
+                $sum: "$material_id"
+            }
+        }
+    },
+    {
+        $sort: {
+            // 根据ad_position_id排序,-1表示降序
+            _id: -1
+        }
+    },
+    {
+        // 限制条数,可选
+        $limit: 10
+    },
+    {
+        // 匹配条件,可选,放在$group前面就是先匹配在分组,等于613和小于700
+        $match: {_id: 613, count: {$lt: 700}}
+    }
+// == SELECT ad_position_id,count(1) AS count FROM ad_play_log GROUP BY ad_position_id
+);
+
+###全局锁处理，删除mongodb会话
+MongoDB提供了killOp请求，用于干掉运行时间很长的请求，killOp通常需要与currentOp组合起来使用；先根据currentOp查询到请求的opid，然后根据opid发送killOp的请求。
+
+currentOp
+currentOp的使用，参考官方文档
+
+currentOp会将后端Mongod上正在执行的请求都列出来，也可根据查询条件（如请求类型，请求是否正在等待锁，请求操作的DB或collection）来进行过滤。
+
+例1：查询所有正在等待锁的写操作
+
+db.currentOp(
+   {
+     "waitingForLock" : true,
+     $or: [
+        { "op" : { "$in" : [ "insert", "update", "remove" ] } },
+        { "query.findandmodify": { $exists: true } }
+    ]
+   }
+)
+例2：查询所有操作db1并且执行时间已超过3s的请求
+
+db.currentOp(
+   {
+     "active" : true,
+     "secs_running" : { "$gt" : 3 },
+     "ns" : /^db1\./
+   }
+)
+currentOp的过滤条件包括
+
+请求操作类型，insert、update、delete...
+请求对应的connectionId，threadId
+请求是否正在等待锁
+请求执行时间
+请求操作的DB或collection
+请求query的内容
+...
+killOp
+currentOp的输出结果里，每个请求包含一个opid字段，有了opid，就可以发送killOp来干掉对应的请求。
+
+##查询实时事务
+db.currentOp().inprog.forEach(function(op) {if(op.op=='query') printjson(op.opid);});
+
+db.currentOp().inprog.forEach(function(op) {if(op.secs_running > 30 && op.op=='query') printjson(op.opid);});
+
+db.killOp(opid)
+要了解killOp的意义，需要先搞清楚几个问题
+
+客户端到Monogd Server连接断掉后，连接上执行的请求是否会立即结束？
+比如你通过mongo shell，发送了一个createIndex的请求，给某个包含1000w个文档的集合建立索引，这个请求会耗时很久，你想提前中止请求，Ctrl-C停掉了mongo shell，此时mongo shell到server的连接会关闭掉。
+
+但后端createIndex的请求（MongoDB每个连接的请求由一个对应的线程来处理）不会立即结束，而是会一直执行下去，直到createIndex结束，给客户端发送应答时，发现连接已经关闭，然后线程才退出。
+
+为了让createIndex早点结束，你就需要killOp来帮忙，通过currentOp找到craeteIndex请求的opid，然后发送killOp，createIndex会在下个『检查点』就结束执行，整个线程退出。
+
+发送killOp后，请求是否会立即结束？
+killOp的实现原理如下
+
+每个连接对应的服务线程存储了一个killPending的字段，当发送killOp时，会将该字段置1；请求在执行过程中，可以通过不断的调用OperationContext::checkForInterrupt()来检查killPending是否被设置，如果被设置，则线程退出。
+
+一个请求要支持killOp，必须在请求的处理逻辑里加上checkForInterrupt()检查点才行，否则即使发送了killOp，也只能等待请求完全处理完毕线程才会退出。
+
+比如createIndex的处理逻辑里包含了类似如下的代码，在createIndex的循环过程中，一旦killPending被置1了，createIndex的执行可以在当前循环结束时退出。
+
+while (!createIndexFinished) {
+    createIndexForOneElement();
+    checkForInterupt();
+}
+所以发送killOp后，请求要执行到下一个『检查点』线程才会退出，MongoDB在很多可能耗时长的请求中，都加入了checkForInterrupt()检查点，如创建索引，repair database，mapreduce、aggregation等。
+
+
+##分组
+db.selfBlacklist.aggregate([
+{
+  $match : {
+    "mongoCreateTime" : {$exists:true}
+  }
+},
+{
+  $group: {
+    _id: {
+      "mongoCreateTime": "$mongoCreateTime"
+      },
+    count: {$sum:1}
+  }
+}
+])
+
+##模糊查询
+mongodb中$regex的用法
+官网地址：https://docs.mongodb.com/manual/reference/operator/query/regex/#regex-case-insensitive
+
+{ "_id" : 100, "sku" : "abc123", "description" : "Single line description." }
+{ "_id" : 101, "sku" : "abc789", "description" : "First line\nSecond line" }
+{ "_id" : 102, "sku" : "xyz456", "description" : "Many spaces before     line" }
+{ "_id" : 103, "sku" : "xyz789", "description" : "Multiple\nline description" }
+1
+2
+3
+4
+db.collection.find( { sku: /adC/i } );等效于下面这种写法 
+db.collection.find( { sku: { $regex: 'abC', $options: 'i' } } ); 
+以上是个简单的应用。
+
+参数介绍： 
+Option ===== Description 
+参数 i ====== 加了这个参数，表示不区分大小写
+
+参数 m ===== 个人理解这个参数是用来匹配value中有换行符(\n)的情形。 
+还有一个情形是：匹配规则中使用了锚,所谓的锚就是^ 开头, $ 结束 
+比如：db.products.find( { description: { $regex: /^S/, $options: 'm' } } ) 
+上面匹配规则的意思就是匹配description字段的value值中，以大写S开头的value值。 
+匹配后结果是：
+
+{ "_id" : 100, "sku" : "abc123", "description" : "Single line description." }
+{ "_id" : 101, "sku" : "abc789", "description" : "First line\nSecond line" }
+1
+2
+可以看出，第二条记录中descriptio的值包含\n换行字符，而他之所以能匹配出来就是因为 
+添加了m 参数。 
+假设没有添加m参数，语句就是
+
+db.products.find( { description: { $regex: /^S/} }
+1
+此时匹配结果为
+
+{ "_id" : 100, "sku" : "abc123", "description" : "Single line description." }
+1
+再比如我们连锚都不写也就是去掉^符合，语句变成
+
+db.products.find( { description: { $regex: /S/ } } )
+1
+此时结果为：
+
+{ "_id" : 100, "sku" : "abc123", "description" : "Single line description." }
+{ "_id" : 101, "sku" : "abc789", "description" : "First line\nSecond line" }
+1
+2
+此时可以分析出m参数的使用场景： 
+应该是为了匹配字段value值中以某个字符开头(^)，或者是某个字符结束($).即便value中包含换行符(\n)也能匹配到。 
+从上例最后例子看出，m参数应该是和锚同时使用才有意思，否则直接去匹配也能匹配出来。说明m是在特殊需求下才使用的！
+
+参数 s ===== 允许点字符（.）匹配所有的字符，包括换行符。
+
+比如语句：
+
+db.products.find( { description: { $regex: /m.*line/, $options: 'si' } } )
+1
+匹配value中包含m且之后为任意字符包括换行符并且还包含line字符的字符串。不区分大小写 
+结果为：
+
+{ "_id" : 102, "sku" : "xyz456", "description" : "Many spaces before     line" }
+{ "_id" : 103, "sku" : "xyz789", "description" : "Multiple\nline description" }
+1
+2
+如果不加s参数时，语句为：
+
+db.products.find( { description: { $regex: /m.*line/, $options: 'i' } } )
+1
+结果为：
+
+{ "_id" : 102, "sku" : "xyz456", "description" : "Many spaces before     line" }
+1
+参数 x ====== 官网的大意是忽视空白字符。
+
+
+##查询重复数据
+db.creditAuthReportCacheData.aggregate([
+  { $group: { 
+    _id: { taskType: "$taskType", thirdToken: "$thirdToken" }, 
+    uniqueIds: { $addToSet: "$_id" },
+    count: { $sum: 1 } 
+  }}, 
+  { $match: { 
+    count: { $gt: 1 } 
+  }}
+])
+
+db.getCollection('users').aggregate([
+    { $group: { _id : '$openid', count: { $sum : 1 } } },
+    { $match: { count: { $gt : 1} } }
+])
+
+mongodb批量添加某列和批量修改某列的数据类型
+1、批量向jd这个文档添加操作属性为state 值为0的列 这里默认为double类型
+
+db.jd_goods_code.update(
+    {"state" : {$exists : false}},
+    {"$set" : {"state" : 0}},
+    false,
+    true
+)
+1
+2
+3
+4
+5
+6
+2、批量更新state(double)的数据类型为Int32, 
+type:1表示 double 类型 
+new NumberInt(x.state)表示修改state为int32位
+
+db.jd.find({"state":{$type:1}}).forEach( 
+    function(x){ 
+        x.state=new NumberInt(x.state); 
+        db.jd_goods_code.save(x); 
+    } 
+); 
+1
+2
+3
+4
+5
+6
+具体的数据类型对应值如下
+
+类型    数字     备注
+Double    1     双精度浮点数 - 此类型用于存储浮点值
+String    2     字符串 - 这是用于存储数据的最常用的数据类型。MongoDB中的字符串必须为UTF-8
+Object    3     对象 - 此数据类型用于嵌入式文档
+Array     4     数组 - 此类型用于将数组或列表或多个值存储到一个键中
+Binary data  5     二进制数据 - 此数据类型用于存储二进制数据
+Undefined   6     已废弃
+Object id   7     对象ID - 此数据类型用于存储文档的ID
+Boolean    8     布尔类型 - 此类型用于存储布尔值(true / false)值
+Date     9     日期 - 此数据类型用于以UNIX时间格式存储当前日期或时间。可以通过创建日期对象并将日，月，年的日期进行指定自己需要的日期时间
+Null     10    Null - 此类型用于存储Null值
+Regular    11    正则表达式 - 此数据类型用于存储正则表达式
+JavaScript  13    代码 - 此数据类型用于将JavaScript代码存储到文档中
+Symbol    14    符号 - 该数据类型与字符串相同；但是，通常保留用于使用特定符号类型的语言
+JavaScript (with scope) 15   代码 - 此数据类型用于将带作用域的JavaScript代码存储到文档中
+32-bit integer      16   32位整型 - 此类型用于存储数值
+Timestamp        17   时间戳 - 当文档被修改或添加时，可以方便地进行录制
+64-bit integer      18   64位整型 - 此类型用于存储数值
+Min key         255  最小键 - 此类型用于将值与最小BSON元素进行比较  
+Max key         127  最大键 - 此类型用于将值与最大BSON元素进行比较
